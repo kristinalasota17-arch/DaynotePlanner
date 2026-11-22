@@ -6,7 +6,6 @@ import android.os.Bundle
 import android.graphics.Color
 import android.graphics.Typeface
 import android.view.Gravity
-import android.view.View
 import android.widget.*
 import org.json.JSONArray
 import org.json.JSONObject
@@ -24,7 +23,7 @@ class MainActivity : Activity() {
     private val purple = Color.rgb(129, 117, 216)
     private val dark = Color.rgb(39, 36, 55)
     private val muted = Color.rgb(135, 132, 150)
-    private val background = Color.rgb(247, 246, 252)
+    private val pageBackground = Color.rgb(247, 246, 252)
 
     data class Task(
         val id: Long,
@@ -44,7 +43,7 @@ class MainActivity : Activity() {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(24, 35, 24, 20)
-            setBackgroundColor(background)
+            setBackgroundColor(pageBackground)
         }
 
         val greeting = TextView(this).apply {
