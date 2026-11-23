@@ -2,6 +2,8 @@ package com.daynote.planner
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import android.os.Bundle
 import android.graphics.Color
 import android.graphics.Typeface
@@ -10,6 +12,7 @@ import android.widget.*
 import org.json.JSONArray
 import org.json.JSONObject
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -25,9 +28,18 @@ class MainActivity : Activity() {
     private val muted = Color.rgb(135, 132, 150)
     private val pageBackground = Color.rgb(247, 246, 252)
 
+    private val categories = listOf(
+        "Личное", "Работа", "Учёба", "Покупки", "Другое"
+    )
+
     data class Task(
         val id: Long,
         var title: String,
+        var description: String = "",
+        var category: String = "Личное",
+        var date: Long? = null,
+        var hour: Int? = null,
+        var minute: Int? = null,
         var done: Boolean = false
     )
 
@@ -58,14 +70,15 @@ class MainActivity : Activity() {
             text = "Мой день"
             textSize = 32f
             setTextColor(dark)
-            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            typeface = Typeface.create(
+                "sans-serif-medium", Typeface.NORMAL
+            )
             setPadding(0, 12, 0, 4)
         }
 
-        val date = TextView(this).apply {
+        val dateText = TextView(this).apply {
             text = SimpleDateFormat(
-                "EEEE, d MMMM",
-                Locale("ru")
+                "EEEE, d MMMM", Locale("ru")
             ).format(Date())
             textSize = 15f
             setTextColor(muted)
@@ -96,7 +109,7 @@ class MainActivity : Activity() {
 
         root.addView(greeting)
         root.addView(heading)
-        root.addView(date)
+        root.addView(dateText)
         root.addView(countText)
         root.addView(addButton)
 
@@ -114,30 +127,159 @@ class MainActivity : Activity() {
     }
 
     private fun addTaskDialog() {
-        val input = EditText(this).apply {
-            hint = "Например, купить продукты"
+        var selectedDate: Long? = null
+        var selectedHour: Int? = null
+        var selectedMinute: Int? = null
+
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(24, 8, 24, 0)
+        }
+
+        val titleInput = EditText(this).apply {
+            hint = "Название задачи"
             textSize = 16f
             setSingleLine(true)
         }
 
-        val container = LinearLayout(this).apply {
-            setPadding(24, 8, 24, 0)
-            addView(input)
+        val descriptionInput = EditText(this).apply {
+            hint = "Описание (необязательно)"
+            textSize = 15f
+            minLines = 2
+            gravity = Gravity.TOP
         }
 
-        AlertDialog.Builder(this)
+        val categoryLabel = TextView(this).apply {
+            text = "Категория"
+            textSize = 14f
+            setTextColor(muted)
+            setPadding(0, 12, 0, 4)
+        }
+
+        val categorySpinner = Spinner(this).apply {
+            adapter = ArrayAdapter(
+                this@MainActivity,
+                android.R.layout.simple_spinner_dropdown_item,
+                categories
+            )
+        }
+
+        val dateButton = Button(this).apply {
+            text = "Выбрать дату"
+        }
+
+        val timeButton = Button(this).apply {
+            text = "Выбрать время"
+        }
+
+        val clearDateButton = Button(this).apply {
+            text = "Сбросить дату и время"
+            textSize = 12f
+        }
+
+        dateButton.setOnClickListener {
+            val calendar = Calendar.getInstance()
+
+            if (selectedDate != null) {
+                calendar.timeInMillis = selectedDate!!
+            }
+
+            DatePickerDialog(
+                this,
+                { _, year, month, day ->
+                    val chosen = Calendar.getInstance()
+                    chosen.set(year, month, day, 0, 0, 0)
+                    chosen.set(Calendar.MILLISECOND, 0)
+                    selectedDate = chosen.timeInMillis
+
+                    dateButton.text = SimpleDateFormat(
+                        "d MMMM yyyy", Locale("ru")
+                    ).format(Date(selectedDate!!))
+                },
+                calendar.get(Calendar.YEAR),
+                calendar.get(Calendar.MONTH),
+                calendar.get(Calendar.DAY_OF_MONTH)
+            ).show()
+        }
+
+        timeButton.setOnClickListener {
+            val calendar = Calendar.getInstance()
+
+            TimePickerDialog(
+                this,
+                { _, hour, minute ->
+                    selectedHour = hour
+                    selectedMinute = minute
+
+                    timeButton.text = String.format(
+                        Locale.getDefault(),
+                        "%02d:%02d",
+                        hour,
+                        minute
+                    )
+                },
+                calendar.get(Calendar.HOUR_OF_DAY),
+                calendar.get(Calendar.MINUTE),
+                true
+            ).show()
+        }
+
+        clearDateButton.setOnClickListener {
+            selectedDate = null
+            selectedHour = null
+            selectedMinute = null
+            dateButton.text = "Выбрать дату"
+            timeButton.text = "Выбрать время"
+        }
+
+        container.addView(titleInput)
+        container.addView(descriptionInput)
+        container.addView(categoryLabel)
+        container.addView(categorySpinner)
+        container.addView(dateButton)
+        container.addView(timeButton)
+        container.addView(clearDateButton)
+
+        val dialog = AlertDialog.Builder(this)
             .setTitle("Новая задача")
             .setView(container)
-            .setPositiveButton("Добавить") { _, _ ->
-                val name = input.text.toString().trim()
-                if (name.isNotEmpty()) {
-                    tasks.add(Task(System.currentTimeMillis(), name))
+            .setPositiveButton("Добавить", null)
+            .setNegativeButton("Отмена", null)
+            .create()
+
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+                .setOnClickListener {
+                    val title = titleInput.text.toString().trim()
+
+                    if (title.isEmpty()) {
+                        Toast.makeText(
+                            this,
+                            "Введи название задачи",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        return@setOnClickListener
+                    }
+
+                    tasks.add(
+                        Task(
+                            id = System.currentTimeMillis(),
+                            title = title,
+                            description = descriptionInput.text.toString().trim(),
+                            category = categorySpinner.selectedItem.toString(),
+                            date = selectedDate,
+                            hour = selectedHour,
+                            minute = selectedMinute
+                        )
+                    )
+
                     saveTasks()
                     refreshTasks()
+                    dialog.dismiss()
                 }
-            }
-            .setNegativeButton("Отмена", null)
-            .show()
+        }
+
+        dialog.show()
     }
 
     private fun refreshTasks() {
@@ -154,21 +296,27 @@ class MainActivity : Activity() {
                 setTextColor(muted)
                 setPadding(12, 65, 12, 65)
             }
+
             taskList.addView(empty)
         }
 
         tasks.forEach { task ->
             val card = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(14, 12, 14, 12)
+                setBackgroundColor(Color.WHITE)
+            }
+
+            val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding(12, 10, 12, 10)
-                setBackgroundColor(Color.WHITE)
             }
 
             val check = CheckBox(this).apply {
                 isChecked = task.done
                 buttonTintList =
                     android.content.res.ColorStateList.valueOf(purple)
+
                 setOnCheckedChangeListener { _, checked ->
                     task.done = checked
                     saveTasks()
@@ -180,11 +328,14 @@ class MainActivity : Activity() {
                 text = task.title
                 textSize = 16f
                 setTextColor(dark)
+                typeface = Typeface.DEFAULT_BOLD
+
                 if (task.done) {
                     paintFlags = paintFlags or
                         android.graphics.Paint.STRIKE_THRU_TEXT_FLAG
                     alpha = 0.5f
                 }
+
                 layoutParams = LinearLayout.LayoutParams(0, -2, 1f)
             }
 
@@ -193,6 +344,7 @@ class MainActivity : Activity() {
                 textSize = 25f
                 setTextColor(muted)
                 setPadding(12, 0, 8, 0)
+
                 setOnClickListener {
                     tasks.remove(task)
                     saveTasks()
@@ -200,16 +352,59 @@ class MainActivity : Activity() {
                 }
             }
 
-            card.addView(check)
-            card.addView(name)
-            card.addView(delete)
+            row.addView(check)
+            row.addView(name)
+            row.addView(delete)
+            card.addView(row)
+
+            val details = mutableListOf<String>()
+            details.add(task.category)
+
+            if (task.date != null) {
+                details.add(
+                    SimpleDateFormat(
+                        "d MMM yyyy", Locale("ru")
+                    ).format(Date(task.date!!))
+                )
+            }
+
+            if (task.hour != null && task.minute != null) {
+                details.add(
+                    String.format(
+                        Locale.getDefault(),
+                        "%02d:%02d",
+                        task.hour,
+                        task.minute
+                    )
+                )
+            }
+
+            val info = TextView(this).apply {
+                text = details.joinToString("  •  ")
+                textSize = 12f
+                setTextColor(muted)
+                setPadding(42, 0, 0, 2)
+            }
+
+            card.addView(info)
+
+            if (task.description.isNotEmpty()) {
+                val description = TextView(this).apply {
+                    text = task.description
+                    textSize = 14f
+                    setTextColor(muted)
+                    setPadding(42, 6, 0, 0)
+                }
+
+                card.addView(description)
+            }
 
             val params = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
-            params.setMargins(0, 6, 0, 6)
 
+            params.setMargins(0, 6, 0, 6)
             taskList.addView(card, params)
         }
     }
@@ -221,6 +416,11 @@ class MainActivity : Activity() {
             val item = JSONObject()
             item.put("id", it.id)
             item.put("title", it.title)
+            item.put("description", it.description)
+            item.put("category", it.category)
+            item.put("date", it.date ?: JSONObject.NULL)
+            item.put("hour", it.hour ?: JSONObject.NULL)
+            item.put("minute", it.minute ?: JSONObject.NULL)
             item.put("done", it.done)
             array.put(item)
         }
@@ -234,11 +434,26 @@ class MainActivity : Activity() {
 
         for (i in 0 until array.length()) {
             val item = array.getJSONObject(i)
+
             tasks.add(
                 Task(
-                    item.getLong("id"),
-                    item.getString("title"),
-                    item.getBoolean("done")
+                    id = item.optLong(
+                        "id",
+                        System.currentTimeMillis() + i
+                    ),
+                    title = item.optString("title", ""),
+                    description = item.optString("description", ""),
+                    category = item.optString("category", "Личное"),
+                    date = if (
+                        item.has("date") && !item.isNull("date")
+                    ) item.optLong("date") else null,
+                    hour = if (
+                        item.has("hour") && !item.isNull("hour")
+                    ) item.optInt("hour") else null,
+                    minute = if (
+                        item.has("minute") && !item.isNull("minute")
+                    ) item.optInt("minute") else null,
+                    done = item.optBoolean("done", false)
                 )
             )
         }
