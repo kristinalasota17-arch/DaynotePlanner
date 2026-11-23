@@ -3,14 +3,13 @@ package com.daynote.planner
 import android.app.Activity
 import android.app.AlertDialog
 import android.app.DatePickerDialog
-import android.app.TimePickerDialog
 import android.app.Dialog
+import android.app.TimePickerDialog
 import android.os.Bundle
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
-import android.view.View
 import android.view.WindowManager
 import android.widget.*
 import org.json.JSONArray
@@ -86,17 +85,10 @@ class MainActivity : Activity() {
             textSize = size
             setTextColor(color)
 
-            typeface = if (bold) {
-                Typeface.create(
-                    "sans-serif-medium",
-                    Typeface.NORMAL
-                )
-            } else {
-                Typeface.create(
-                    "sans-serif",
-                    Typeface.NORMAL
-                )
-            }
+            typeface = Typeface.create(
+                if (bold) "sans-serif-medium" else "sans-serif",
+                Typeface.NORMAL
+            )
         }
     }
 
@@ -214,17 +206,10 @@ class MainActivity : Activity() {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
 
-                background = if (selected) {
-                    rounded(
-                        lightPurple,
-                        dp(17).toFloat()
-                    )
-                } else {
-                    rounded(
-                        Color.TRANSPARENT,
-                        dp(17).toFloat()
-                    )
-                }
+                background = rounded(
+                    if (selected) lightPurple else Color.TRANSPARENT,
+                    dp(17).toFloat()
+                )
 
                 setPadding(
                     dp(5),
@@ -626,8 +611,6 @@ class MainActivity : Activity() {
             .show()
     }
 
-    // ОФОРМЛЕННОЕ ОКНО СОЗДАНИЯ ЗАДАЧИ
-
     private fun addTaskDialog() {
 
         var selectedDate: Long? = null
@@ -823,7 +806,10 @@ class MainActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL
         }
 
-        val dateButton = TextView(this).apply {
+        // Исправлено: сначала создаём TextView, затем задаём обработчик.
+        val dateButton = TextView(this)
+
+        dateButton.apply {
             text = "Выбрать дату"
             textSize = 13f
             gravity = Gravity.CENTER
@@ -841,7 +827,7 @@ class MainActivity : Activity() {
                 dp(14)
             )
 
-            setOnClickListener {
+            setOnClickListener { clickedView ->
 
                 val calendar = Calendar.getInstance()
 
@@ -867,7 +853,7 @@ class MainActivity : Activity() {
 
                         selectedDate = chosen.timeInMillis
 
-                        dateButton.text =
+                        (clickedView as TextView).text =
                             SimpleDateFormat(
                                 "d MMM yyyy",
                                 Locale("ru")
@@ -882,7 +868,10 @@ class MainActivity : Activity() {
             }
         }
 
-        val timeButton = TextView(this).apply {
+        // Исправлено аналогичным образом для времени.
+        val timeButton = TextView(this)
+
+        timeButton.apply {
             text = "Выбрать время"
             textSize = 13f
             gravity = Gravity.CENTER
@@ -900,7 +889,7 @@ class MainActivity : Activity() {
                 dp(14)
             )
 
-            setOnClickListener {
+            setOnClickListener { clickedView ->
 
                 val calendar = Calendar.getInstance()
 
@@ -911,12 +900,13 @@ class MainActivity : Activity() {
                         selectedHour = hour
                         selectedMinute = minute
 
-                        timeButton.text = String.format(
-                            Locale.getDefault(),
-                            "%02d:%02d",
-                            hour,
-                            minute
-                        )
+                        (clickedView as TextView).text =
+                            String.format(
+                                Locale.getDefault(),
+                                "%02d:%02d",
+                                hour,
+                                minute
+                            )
                     },
                     calendar.get(Calendar.HOUR_OF_DAY),
                     calendar.get(Calendar.MINUTE),
