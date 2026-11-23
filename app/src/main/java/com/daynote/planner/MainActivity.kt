@@ -4,12 +4,14 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import android.app.Dialog
 import android.os.Bundle
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
+import android.view.WindowManager
 import android.widget.*
 import org.json.JSONArray
 import org.json.JSONObject
@@ -27,6 +29,7 @@ class MainActivity : Activity() {
     private lateinit var prefs: android.content.SharedPreferences
 
     private val purple = Color.rgb(129, 117, 216)
+    private val lightPurple = Color.rgb(239, 236, 253)
     private val dark = Color.rgb(39, 36, 55)
     private val muted = Color.rgb(145, 142, 158)
     private val pageBackground = Color.rgb(247, 246, 252)
@@ -49,15 +52,23 @@ class MainActivity : Activity() {
         var done: Boolean = false
     )
 
+    private fun dp(value: Int): Int {
+        return (value * resources.displayMetrics.density).toInt()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         prefs = getSharedPreferences("daynote", MODE_PRIVATE)
+
         loadTasks()
         showMain()
     }
 
-    private fun rounded(color: Int, radius: Float): GradientDrawable {
+    private fun rounded(
+        color: Int,
+        radius: Float
+    ): GradientDrawable {
         return GradientDrawable().apply {
             setColor(color)
             cornerRadius = radius
@@ -74,30 +85,55 @@ class MainActivity : Activity() {
             text = value
             textSize = size
             setTextColor(color)
+
             typeface = if (bold) {
-                Typeface.create("sans-serif-medium", Typeface.NORMAL)
+                Typeface.create(
+                    "sans-serif-medium",
+                    Typeface.NORMAL
+                )
             } else {
-                Typeface.create("sans-serif", Typeface.NORMAL)
+                Typeface.create(
+                    "sans-serif",
+                    Typeface.NORMAL
+                )
             }
         }
     }
 
     private fun showMain() {
+
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(pageBackground)
-            setPadding(20, 35, 20, 12)
+            setPadding(
+                dp(20),
+                dp(35),
+                dp(20),
+                dp(12)
+            )
         }
 
         val header = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
         }
 
-        val logo = makeText("DAYNOTE", 12f, purple, true)
+        val logo = makeText(
+            "DAYNOTE",
+            12f,
+            purple,
+            true
+        )
+
         logo.letterSpacing = 0.2f
 
-        val heading = makeText(currentScreen, 30f, dark, true)
-        heading.setPadding(0, 10, 0, 3)
+        val heading = makeText(
+            currentScreen,
+            30f,
+            dark,
+            true
+        )
+
+        heading.setPadding(0, dp(10), 0, dp(3))
 
         val date = makeText(
             SimpleDateFormat(
@@ -132,23 +168,35 @@ class MainActivity : Activity() {
                 0,
                 1f
             ).apply {
-                topMargin = 20
+                topMargin = dp(20)
             }
         )
 
         root.addView(bottomBar)
 
         setContentView(root)
+
         showScreen()
     }
 
     private fun createBottomBar(): LinearLayout {
+
         val bar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
-            background = rounded(white, 35f)
-            setPadding(5, 8, 5, 8)
-            elevation = 5f
+            background = rounded(
+                white,
+                dp(25).toFloat()
+            )
+
+            setPadding(
+                dp(5),
+                dp(7),
+                dp(5),
+                dp(7)
+            )
+
+            elevation = dp(5).toFloat()
         }
 
         val items = listOf(
@@ -159,19 +207,34 @@ class MainActivity : Activity() {
         )
 
         items.forEach { item ->
+
             val selected = currentScreen == item.first
 
-            val button = TextView(this).apply {
-                text = "${item.second}\n${item.first}"
-                textSize = if (item.first == "+") 21f else 11f
+            val button = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
-                setTextColor(
-                    if (selected) purple else muted
+
+                background = if (selected) {
+                    rounded(
+                        lightPurple,
+                        dp(17).toFloat()
+                    )
+                } else {
+                    rounded(
+                        Color.TRANSPARENT,
+                        dp(17).toFloat()
+                    )
+                }
+
+                setPadding(
+                    dp(5),
+                    dp(5),
+                    dp(5),
+                    dp(5)
                 )
-                setPadding(5, 5, 5, 5)
-                typeface = Typeface.DEFAULT_BOLD
 
                 setOnClickListener {
+
                     if (item.first == "+") {
                         showMoreMenu()
                     } else {
@@ -181,9 +244,34 @@ class MainActivity : Activity() {
                 }
             }
 
+            val icon = makeText(
+                item.second,
+                if (item.first == "+") 27f else 24f,
+                if (selected) purple else muted,
+                true
+            )
+
+            icon.gravity = Gravity.CENTER
+
+            val label = makeText(
+                item.first,
+                11f,
+                if (selected) purple else muted,
+                selected
+            )
+
+            label.gravity = Gravity.CENTER
+
+            button.addView(icon)
+            button.addView(label)
+
             bar.addView(
                 button,
-                LinearLayout.LayoutParams(0, 55, 1f)
+                LinearLayout.LayoutParams(
+                    0,
+                    dp(65),
+                    1f
+                )
             )
         }
 
@@ -191,32 +279,41 @@ class MainActivity : Activity() {
     }
 
     private fun showScreen() {
+
         content.removeAllViews()
 
         when (currentScreen) {
+
             "Задачи" -> showTasks()
+
             "Дневник" -> showDiary()
+
             "Трекеры" -> showTrackers()
+
             "Календарь" -> showPlaceholder(
                 "Календарь",
                 "Здесь будет календарь твоих событий и задач."
             )
+
             "Заметки" -> showPlaceholder(
                 "Заметки",
                 "Здесь будут храниться твои заметки."
             )
+
             "Цели" -> showPlaceholder(
                 "Цели",
                 "Здесь можно будет планировать свои цели."
             )
+
             "Настройки" -> showPlaceholder(
                 "Настройки",
-                "Здесь появятся настройки приложения и оформления."
+                "Здесь появятся настройки приложения."
             )
         }
     }
 
     private fun showTasks() {
+
         val completed = tasks.count { it.done }
 
         countText = makeText(
@@ -231,41 +328,72 @@ class MainActivity : Activity() {
             gravity = Gravity.CENTER
             setTextColor(white)
             typeface = Typeface.DEFAULT_BOLD
-            background = rounded(purple, 22f)
-            setPadding(15, 16, 15, 16)
-            setOnClickListener { addTaskDialog() }
+
+            background = rounded(
+                purple,
+                dp(18).toFloat()
+            )
+
+            setPadding(
+                dp(15),
+                dp(16),
+                dp(15),
+                dp(16)
+            )
+
+            setOnClickListener {
+                addTaskDialog()
+            }
         }
 
         content.addView(countText)
+
         content.addView(
             addButton,
             LinearLayout.LayoutParams(
                 -1,
                 -2
             ).apply {
-                topMargin = 15
-                bottomMargin = 15
+                topMargin = dp(15)
+                bottomMargin = dp(15)
             }
         )
 
         if (tasks.isEmpty()) {
+
             val empty = makeText(
                 "Пока здесь пусто.\nДобавь свою первую задачу.",
                 15f,
                 muted
             ).apply {
                 gravity = Gravity.CENTER
-                setPadding(10, 60, 10, 60)
+                setPadding(
+                    dp(10),
+                    dp(60),
+                    dp(10),
+                    dp(60)
+                )
             }
 
             content.addView(empty)
         }
 
         tasks.forEach { task ->
+
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
-                background = rounded(white, 22f)
-                setPadding(14, 12, 14, 12)
+
+                background = rounded(
+                    white,
+                    dp(20).toFloat()
+                )
+
+                setPadding(
+                    dp(14),
+                    dp(12),
+                    dp(14),
+                    dp(12)
+                )
             }
 
             val row = LinearLayout(this).apply {
@@ -275,8 +403,11 @@ class MainActivity : Activity() {
 
             val check = CheckBox(this).apply {
                 isChecked = task.done
+
                 buttonTintList =
-                    android.content.res.ColorStateList.valueOf(purple)
+                    android.content.res.ColorStateList.valueOf(
+                        purple
+                    )
 
                 setOnCheckedChangeListener { _, checked ->
                     task.done = checked
@@ -291,16 +422,34 @@ class MainActivity : Activity() {
                 dark,
                 true
             ).apply {
+
                 if (task.done) {
                     paintFlags = paintFlags or
                         android.graphics.Paint.STRIKE_THRU_TEXT_FLAG
+
                     alpha = 0.5f
                 }
-                layoutParams = LinearLayout.LayoutParams(0, -2, 1f)
+
+                layoutParams = LinearLayout.LayoutParams(
+                    0,
+                    -2,
+                    1f
+                )
             }
 
-            val delete = makeText("×", 25f, muted).apply {
-                setPadding(12, 0, 8, 0)
+            val delete = makeText(
+                "×",
+                25f,
+                muted
+            ).apply {
+
+                setPadding(
+                    dp(12),
+                    0,
+                    dp(8),
+                    0
+                )
+
                 setOnClickListener {
                     tasks.remove(task)
                     saveTasks()
@@ -311,12 +460,15 @@ class MainActivity : Activity() {
             row.addView(check)
             row.addView(name)
             row.addView(delete)
+
             card.addView(row)
 
             val details = mutableListOf<String>()
+
             details.add(task.category)
 
             if (task.date != null) {
+
                 details.add(
                     SimpleDateFormat(
                         "d MMM yyyy",
@@ -325,7 +477,11 @@ class MainActivity : Activity() {
                 )
             }
 
-            if (task.hour != null && task.minute != null) {
+            if (
+                task.hour != null &&
+                task.minute != null
+            ) {
+
                 details.add(
                     String.format(
                         Locale.getDefault(),
@@ -342,26 +498,40 @@ class MainActivity : Activity() {
                     12f,
                     muted
                 ).apply {
-                    setPadding(42, 0, 0, 0)
+                    setPadding(
+                        dp(42),
+                        0,
+                        0,
+                        0
+                    )
                 }
             )
 
             if (task.description.isNotEmpty()) {
+
                 card.addView(
                     makeText(
                         task.description,
                         14f,
                         muted
                     ).apply {
-                        setPadding(42, 6, 0, 0)
+                        setPadding(
+                            dp(42),
+                            dp(6),
+                            0,
+                            0
+                        )
                     }
                 )
             }
 
             content.addView(
                 card,
-                LinearLayout.LayoutParams(-1, -2).apply {
-                    bottomMargin = 10
+                LinearLayout.LayoutParams(
+                    -1,
+                    -2
+                ).apply {
+                    bottomMargin = dp(10)
                 }
             )
         }
@@ -381,22 +551,55 @@ class MainActivity : Activity() {
         )
     }
 
-    private fun showPlaceholder(title: String, description: String) {
+    private fun showPlaceholder(
+        title: String,
+        description: String
+    ) {
         showSectionCard(title, description)
     }
 
-    private fun showSectionCard(title: String, description: String) {
+    private fun showSectionCard(
+        title: String,
+        description: String
+    ) {
+
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            background = rounded(white, 24f)
-            setPadding(20, 22, 20, 22)
+
+            background = rounded(
+                white,
+                dp(22).toFloat()
+            )
+
+            setPadding(
+                dp(20),
+                dp(22),
+                dp(20),
+                dp(22)
+            )
         }
 
-        card.addView(makeText(title, 20f, dark, true))
+        card.addView(
+            makeText(
+                title,
+                20f,
+                dark,
+                true
+            )
+        )
 
         card.addView(
-            makeText(description, 14f, muted).apply {
-                setPadding(0, 10, 0, 0)
+            makeText(
+                description,
+                14f,
+                muted
+            ).apply {
+                setPadding(
+                    0,
+                    dp(10),
+                    0,
+                    0
+                )
             }
         )
 
@@ -404,6 +607,7 @@ class MainActivity : Activity() {
     }
 
     private fun showMoreMenu() {
+
         val options = arrayOf(
             "Календарь",
             "Заметки",
@@ -414,155 +618,476 @@ class MainActivity : Activity() {
         AlertDialog.Builder(this)
             .setTitle("Другие разделы")
             .setItems(options) { _, which ->
+
                 currentScreen = options[which]
+
                 showMain()
             }
             .show()
     }
 
+    // ОФОРМЛЕННОЕ ОКНО СОЗДАНИЯ ЗАДАЧИ
+
     private fun addTaskDialog() {
+
         var selectedDate: Long? = null
         var selectedHour: Int? = null
         var selectedMinute: Int? = null
+        var selectedCategory = categories[0]
+
+        val dialog = Dialog(this)
 
         val container = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(24, 8, 24, 0)
+
+            background = rounded(
+                white,
+                dp(28).toFloat()
+            )
+
+            setPadding(
+                dp(22),
+                dp(22),
+                dp(22),
+                dp(20)
+            )
         }
+
+        val title = makeText(
+            "Новая задача",
+            24f,
+            dark,
+            true
+        )
+
+        val subtitle = makeText(
+            "Запланируй что-нибудь хорошее",
+            13f,
+            muted
+        )
+
+        subtitle.setPadding(
+            0,
+            dp(5),
+            0,
+            dp(20)
+        )
+
+        val titleLabel = makeText(
+            "Название",
+            13f,
+            dark,
+            true
+        )
 
         val titleInput = EditText(this).apply {
-            hint = "Название задачи"
-            textSize = 16f
+            hint = "Что нужно сделать?"
+            textSize = 15f
+            setTextColor(dark)
+            setHintTextColor(muted)
             setSingleLine(true)
+
+            background = rounded(
+                pageBackground,
+                dp(15).toFloat()
+            )
+
+            setPadding(
+                dp(14),
+                dp(13),
+                dp(14),
+                dp(13)
+            )
         }
 
+        val descriptionLabel = makeText(
+            "Описание",
+            13f,
+            dark,
+            true
+        )
+
+        descriptionLabel.setPadding(
+            0,
+            dp(15),
+            0,
+            dp(5)
+        )
+
         val descriptionInput = EditText(this).apply {
-            hint = "Описание"
-            textSize = 15f
-            minLines = 2
+            hint = "Дополнительная информация..."
+            textSize = 14f
+            setTextColor(dark)
+            setHintTextColor(muted)
+            minLines = 3
             gravity = Gravity.TOP
+
+            background = rounded(
+                pageBackground,
+                dp(15).toFloat()
+            )
+
+            setPadding(
+                dp(14),
+                dp(13),
+                dp(14),
+                dp(13)
+            )
         }
 
         val categoryLabel = makeText(
             "Категория",
-            14f,
-            muted
+            13f,
+            dark,
+            true
         )
 
-        val spinner = Spinner(this).apply {
-            adapter = ArrayAdapter(
-                this@MainActivity,
-                android.R.layout.simple_spinner_dropdown_item,
-                categories
-            )
+        categoryLabel.setPadding(
+            0,
+            dp(17),
+            0,
+            dp(9)
+        )
+
+        val categoryContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
         }
 
-        val dateButton = Button(this).apply {
-            text = "Выбрать дату"
-        }
+        fun updateCategories() {
 
-        val timeButton = Button(this).apply {
-            text = "Выбрать время"
-        }
+            categoryContainer.removeAllViews()
 
-        dateButton.setOnClickListener {
-            val calendar = Calendar.getInstance()
+            categories.forEach { category ->
 
-            DatePickerDialog(
-                this,
-                { _, year, month, day ->
-                    val chosen = Calendar.getInstance()
-                    chosen.set(year, month, day, 0, 0, 0)
-                    chosen.set(Calendar.MILLISECOND, 0)
-                    selectedDate = chosen.timeInMillis
+                val selected = category == selectedCategory
 
-                    dateButton.text = SimpleDateFormat(
-                        "d MMMM yyyy",
-                        Locale("ru")
-                    ).format(Date(selectedDate!!))
-                },
-                calendar.get(Calendar.YEAR),
-                calendar.get(Calendar.MONTH),
-                calendar.get(Calendar.DAY_OF_MONTH)
-            ).show()
-        }
+                val chip = TextView(this).apply {
+                    text = category
+                    textSize = 12f
+                    gravity = Gravity.CENTER
 
-        timeButton.setOnClickListener {
-            val calendar = Calendar.getInstance()
-
-            TimePickerDialog(
-                this,
-                { _, hour, minute ->
-                    selectedHour = hour
-                    selectedMinute = minute
-
-                    timeButton.text = String.format(
-                        Locale.getDefault(),
-                        "%02d:%02d",
-                        hour,
-                        minute
+                    setTextColor(
+                        if (selected) white else dark
                     )
-                },
-                calendar.get(Calendar.HOUR_OF_DAY),
-                calendar.get(Calendar.MINUTE),
-                true
-            ).show()
+
+                    background = rounded(
+                        if (selected) purple else pageBackground,
+                        dp(14).toFloat()
+                    )
+
+                    setPadding(
+                        dp(11),
+                        dp(10),
+                        dp(11),
+                        dp(10)
+                    )
+
+                    setOnClickListener {
+                        selectedCategory = category
+                        updateCategories()
+                    }
+                }
+
+                val params = LinearLayout.LayoutParams(
+                    -2,
+                    -2
+                )
+
+                params.marginEnd = dp(6)
+
+                categoryContainer.addView(
+                    chip,
+                    params
+                )
+            }
         }
 
+        updateCategories()
+
+        val dateLabel = makeText(
+            "Дата и время",
+            13f,
+            dark,
+            true
+        )
+
+        dateLabel.setPadding(
+            0,
+            dp(17),
+            0,
+            dp(9)
+        )
+
+        val dateRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+        }
+
+        val dateButton = TextView(this).apply {
+            text = "Выбрать дату"
+            textSize = 13f
+            gravity = Gravity.CENTER
+            setTextColor(purple)
+
+            background = rounded(
+                lightPurple,
+                dp(14).toFloat()
+            )
+
+            setPadding(
+                dp(12),
+                dp(14),
+                dp(12),
+                dp(14)
+            )
+
+            setOnClickListener {
+
+                val calendar = Calendar.getInstance()
+
+                DatePickerDialog(
+                    this@MainActivity,
+                    { _, year, month, day ->
+
+                        val chosen = Calendar.getInstance()
+
+                        chosen.set(
+                            year,
+                            month,
+                            day,
+                            0,
+                            0,
+                            0
+                        )
+
+                        chosen.set(
+                            Calendar.MILLISECOND,
+                            0
+                        )
+
+                        selectedDate = chosen.timeInMillis
+
+                        dateButton.text =
+                            SimpleDateFormat(
+                                "d MMM yyyy",
+                                Locale("ru")
+                            ).format(
+                                Date(selectedDate!!)
+                            )
+                    },
+                    calendar.get(Calendar.YEAR),
+                    calendar.get(Calendar.MONTH),
+                    calendar.get(Calendar.DAY_OF_MONTH)
+                ).show()
+            }
+        }
+
+        val timeButton = TextView(this).apply {
+            text = "Выбрать время"
+            textSize = 13f
+            gravity = Gravity.CENTER
+            setTextColor(purple)
+
+            background = rounded(
+                lightPurple,
+                dp(14).toFloat()
+            )
+
+            setPadding(
+                dp(12),
+                dp(14),
+                dp(12),
+                dp(14)
+            )
+
+            setOnClickListener {
+
+                val calendar = Calendar.getInstance()
+
+                TimePickerDialog(
+                    this@MainActivity,
+                    { _, hour, minute ->
+
+                        selectedHour = hour
+                        selectedMinute = minute
+
+                        timeButton.text = String.format(
+                            Locale.getDefault(),
+                            "%02d:%02d",
+                            hour,
+                            minute
+                        )
+                    },
+                    calendar.get(Calendar.HOUR_OF_DAY),
+                    calendar.get(Calendar.MINUTE),
+                    true
+                ).show()
+            }
+        }
+
+        dateRow.addView(
+            dateButton,
+            LinearLayout.LayoutParams(
+                0,
+                -2,
+                1f
+            ).apply {
+                marginEnd = dp(7)
+            }
+        )
+
+        dateRow.addView(
+            timeButton,
+            LinearLayout.LayoutParams(
+                0,
+                -2,
+                1f
+            )
+        )
+
+        val buttons = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            setPadding(0, dp(23), 0, 0)
+        }
+
+        val cancelButton = TextView(this).apply {
+            text = "Отмена"
+            textSize = 14f
+            gravity = Gravity.CENTER
+            setTextColor(muted)
+
+            background = rounded(
+                pageBackground,
+                dp(15).toFloat()
+            )
+
+            setPadding(
+                dp(15),
+                dp(14),
+                dp(15),
+                dp(14)
+            )
+
+            setOnClickListener {
+                dialog.dismiss()
+            }
+        }
+
+        val saveButton = TextView(this).apply {
+            text = "Добавить"
+            textSize = 14f
+            gravity = Gravity.CENTER
+            setTextColor(white)
+            typeface = Typeface.DEFAULT_BOLD
+
+            background = rounded(
+                purple,
+                dp(15).toFloat()
+            )
+
+            setPadding(
+                dp(15),
+                dp(14),
+                dp(15),
+                dp(14)
+            )
+
+            setOnClickListener {
+
+                val taskTitle =
+                    titleInput.text.toString().trim()
+
+                if (taskTitle.isEmpty()) {
+
+                    Toast.makeText(
+                        this@MainActivity,
+                        "Введи название задачи",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                    return@setOnClickListener
+                }
+
+                tasks.add(
+                    Task(
+                        id = System.currentTimeMillis(),
+                        title = taskTitle,
+                        description =
+                            descriptionInput.text.toString().trim(),
+                        category = selectedCategory,
+                        date = selectedDate,
+                        hour = selectedHour,
+                        minute = selectedMinute
+                    )
+                )
+
+                saveTasks()
+                showScreen()
+                dialog.dismiss()
+            }
+        }
+
+        buttons.addView(
+            cancelButton,
+            LinearLayout.LayoutParams(
+                0,
+                -2,
+                1f
+            ).apply {
+                marginEnd = dp(8)
+            }
+        )
+
+        buttons.addView(
+            saveButton,
+            LinearLayout.LayoutParams(
+                0,
+                -2,
+                1f
+            )
+        )
+
+        container.addView(title)
+        container.addView(subtitle)
+        container.addView(titleLabel)
         container.addView(titleInput)
+        container.addView(descriptionLabel)
         container.addView(descriptionInput)
         container.addView(categoryLabel)
-        container.addView(spinner)
-        container.addView(dateButton)
-        container.addView(timeButton)
 
-        val dialog = AlertDialog.Builder(this)
-            .setTitle("Новая задача")
-            .setView(container)
-            .setPositiveButton("Добавить", null)
-            .setNegativeButton("Отмена", null)
-            .create()
-
-        dialog.setOnShowListener {
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE)
-                .setOnClickListener {
-                    val title = titleInput.text.toString().trim()
-
-                    if (title.isEmpty()) {
-                        Toast.makeText(
-                            this,
-                            "Введи название задачи",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                        return@setOnClickListener
-                    }
-
-                    tasks.add(
-                        Task(
-                            id = System.currentTimeMillis(),
-                            title = title,
-                            description = descriptionInput.text.toString().trim(),
-                            category = spinner.selectedItem.toString(),
-                            date = selectedDate,
-                            hour = selectedHour,
-                            minute = selectedMinute
-                        )
-                    )
-
-                    saveTasks()
-                    showScreen()
-                    dialog.dismiss()
-                }
+        val categoryScroll = HorizontalScrollView(this).apply {
+            isHorizontalScrollBarEnabled = false
+            addView(categoryContainer)
         }
 
+        container.addView(categoryScroll)
+        container.addView(dateLabel)
+        container.addView(dateRow)
+        container.addView(buttons)
+
+        dialog.setContentView(container)
+
+        dialog.window?.setBackgroundDrawableResource(
+            android.R.color.transparent
+        )
+
         dialog.show()
+
+        dialog.window?.setLayout(
+            resources.displayMetrics.widthPixels - dp(32),
+            WindowManager.LayoutParams.WRAP_CONTENT
+        )
     }
 
     private fun saveTasks() {
+
         val array = JSONArray()
 
         tasks.forEach {
+
             val item = JSONObject()
+
             item.put("id", it.id)
             item.put("title", it.title)
             item.put("description", it.description)
@@ -571,17 +1096,23 @@ class MainActivity : Activity() {
             item.put("hour", it.hour ?: JSONObject.NULL)
             item.put("minute", it.minute ?: JSONObject.NULL)
             item.put("done", it.done)
+
             array.put(item)
         }
 
-        prefs.edit().putString("tasks", array.toString()).apply()
+        prefs.edit()
+            .putString("tasks", array.toString())
+            .apply()
     }
 
     private fun loadTasks() {
+
         val data = prefs.getString("tasks", "[]") ?: "[]"
+
         val array = JSONArray(data)
 
         for (i in 0 until array.length()) {
+
             val item = array.getJSONObject(i)
 
             tasks.add(
@@ -590,19 +1121,47 @@ class MainActivity : Activity() {
                         "id",
                         System.currentTimeMillis() + i
                     ),
-                    title = item.optString("title", ""),
-                    description = item.optString("description", ""),
-                    category = item.optString("category", "Личное"),
+
+                    title = item.optString(
+                        "title",
+                        ""
+                    ),
+
+                    description = item.optString(
+                        "description",
+                        ""
+                    ),
+
+                    category = item.optString(
+                        "category",
+                        "Личное"
+                    ),
+
                     date = if (
-                        item.has("date") && !item.isNull("date")
-                    ) item.optLong("date") else null,
+                        item.has("date") &&
+                        !item.isNull("date")
+                    ) {
+                        item.optLong("date")
+                    } else null,
+
                     hour = if (
-                        item.has("hour") && !item.isNull("hour")
-                    ) item.optInt("hour") else null,
+                        item.has("hour") &&
+                        !item.isNull("hour")
+                    ) {
+                        item.optInt("hour")
+                    } else null,
+
                     minute = if (
-                        item.has("minute") && !item.isNull("minute")
-                    ) item.optInt("minute") else null,
-                    done = item.optBoolean("done", false)
+                        item.has("minute") &&
+                        !item.isNull("minute")
+                    ) {
+                        item.optInt("minute")
+                    } else null,
+
+                    done = item.optBoolean(
+                        "done",
+                        false
+                    )
                 )
             )
         }
