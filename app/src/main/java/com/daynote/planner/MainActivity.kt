@@ -379,6 +379,11 @@ class MainActivity : Activity() {
                     dp(14),
                     dp(12)
                 )
+
+                // Нажатие на карточку открывает редактирование.
+                setOnClickListener {
+                    editTaskDialog(task)
+                }
             }
 
             val row = LinearLayout(this).apply {
@@ -611,12 +616,26 @@ class MainActivity : Activity() {
             .show()
     }
 
-    private fun addTaskDialog() {
+    // Добавление и редактирование задач используют одно окно.
 
-        var selectedDate: Long? = null
-        var selectedHour: Int? = null
-        var selectedMinute: Int? = null
-        var selectedCategory = categories[0]
+    private fun addTaskDialog() {
+        taskDialog(null)
+    }
+
+    private fun editTaskDialog(task: Task) {
+        taskDialog(task)
+    }
+
+    private fun taskDialog(editTask: Task?) {
+
+        var selectedDate: Long? = editTask?.date
+        var selectedHour: Int? = editTask?.hour
+        var selectedMinute: Int? = editTask?.minute
+
+        var selectedCategory =
+            editTask?.category ?: categories[0]
+
+        val editing = editTask != null
 
         val dialog = Dialog(this)
 
@@ -637,14 +656,17 @@ class MainActivity : Activity() {
         }
 
         val title = makeText(
-            "Новая задача",
+            if (editing) "Редактирование" else "Новая задача",
             24f,
             dark,
             true
         )
 
         val subtitle = makeText(
-            "Запланируй что-нибудь хорошее",
+            if (editing)
+                "Измени данные своей задачи"
+            else
+                "Запланируй что-нибудь хорошее",
             13f,
             muted
         )
@@ -669,6 +691,8 @@ class MainActivity : Activity() {
             setTextColor(dark)
             setHintTextColor(muted)
             setSingleLine(true)
+
+            setText(editTask?.title ?: "")
 
             background = rounded(
                 pageBackground,
@@ -704,6 +728,8 @@ class MainActivity : Activity() {
             setHintTextColor(muted)
             minLines = 3
             gravity = Gravity.TOP
+
+            setText(editTask?.description ?: "")
 
             background = rounded(
                 pageBackground,
@@ -806,11 +832,16 @@ class MainActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL
         }
 
-        // Исправлено: сначала создаём TextView, затем задаём обработчик.
         val dateButton = TextView(this)
 
         dateButton.apply {
-            text = "Выбрать дату"
+            text = selectedDate?.let {
+                SimpleDateFormat(
+                    "d MMM yyyy",
+                    Locale("ru")
+                ).format(Date(it))
+            } ?: "Выбрать дату"
+
             textSize = 13f
             gravity = Gravity.CENTER
             setTextColor(purple)
@@ -830,6 +861,10 @@ class MainActivity : Activity() {
             setOnClickListener { clickedView ->
 
                 val calendar = Calendar.getInstance()
+
+                if (selectedDate != null) {
+                    calendar.timeInMillis = selectedDate!!
+                }
 
                 DatePickerDialog(
                     this@MainActivity,
@@ -857,9 +892,7 @@ class MainActivity : Activity() {
                             SimpleDateFormat(
                                 "d MMM yyyy",
                                 Locale("ru")
-                            ).format(
-                                Date(selectedDate!!)
-                            )
+                            ).format(Date(selectedDate!!))
                     },
                     calendar.get(Calendar.YEAR),
                     calendar.get(Calendar.MONTH),
@@ -868,11 +901,23 @@ class MainActivity : Activity() {
             }
         }
 
-        // Исправлено аналогичным образом для времени.
         val timeButton = TextView(this)
 
         timeButton.apply {
-            text = "Выбрать время"
+            text = if (
+                selectedHour != null &&
+                selectedMinute != null
+            ) {
+                String.format(
+                    Locale.getDefault(),
+                    "%02d:%02d",
+                    selectedHour,
+                    selectedMinute
+                )
+            } else {
+                "Выбрать время"
+            }
+
             textSize = 13f
             gravity = Gravity.CENTER
             setTextColor(purple)
@@ -893,6 +938,12 @@ class MainActivity : Activity() {
 
                 val calendar = Calendar.getInstance()
 
+                val initialHour =
+                    selectedHour ?: calendar.get(Calendar.HOUR_OF_DAY)
+
+                val initialMinute =
+                    selectedMinute ?: calendar.get(Calendar.MINUTE)
+
                 TimePickerDialog(
                     this@MainActivity,
                     { _, hour, minute ->
@@ -908,8 +959,8 @@ class MainActivity : Activity() {
                                 minute
                             )
                     },
-                    calendar.get(Calendar.HOUR_OF_DAY),
-                    calendar.get(Calendar.MINUTE),
+                    initialHour,
+                    initialMinute,
                     true
                 ).show()
             }
@@ -965,7 +1016,7 @@ class MainActivity : Activity() {
         }
 
         val saveButton = TextView(this).apply {
-            text = "Добавить"
+            text = if (editing) "Сохранить" else "Добавить"
             textSize = 14f
             gravity = Gravity.CENTER
             setTextColor(white)
@@ -999,18 +1050,35 @@ class MainActivity : Activity() {
                     return@setOnClickListener
                 }
 
-                tasks.add(
-                    Task(
-                        id = System.currentTimeMillis(),
-                        title = taskTitle,
-                        description =
-                            descriptionInput.text.toString().trim(),
-                        category = selectedCategory,
-                        date = selectedDate,
-                        hour = selectedHour,
-                        minute = selectedMinute
+                if (editTask != null) {
+
+                    // Обновляем существующую задачу.
+                    editTask.title = taskTitle
+
+                    editTask.description =
+                        descriptionInput.text.toString().trim()
+
+                    editTask.category = selectedCategory
+                    editTask.date = selectedDate
+                    editTask.hour = selectedHour
+                    editTask.minute = selectedMinute
+
+                } else {
+
+                    // Создаём новую задачу.
+                    tasks.add(
+                        Task(
+                            id = System.currentTimeMillis(),
+                            title = taskTitle,
+                            description =
+                                descriptionInput.text.toString().trim(),
+                            category = selectedCategory,
+                            date = selectedDate,
+                            hour = selectedHour,
+                            minute = selectedMinute
+                        )
                     )
-                )
+                }
 
                 saveTasks()
                 showScreen()
