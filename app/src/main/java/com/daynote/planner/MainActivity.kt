@@ -29,7 +29,7 @@ class MainActivity : Activity() {
     private val purple = Color.rgb(129, 117, 216)
     private val dark = Color.rgb(39, 36, 55)
     private val muted = Color.rgb(145, 142, 158)
-    private val background = Color.rgb(247, 246, 252)
+    private val pageBackground = Color.rgb(247, 246, 252)
     private val white = Color.WHITE
 
     private var currentScreen = "Задачи"
@@ -85,7 +85,7 @@ class MainActivity : Activity() {
     private fun showMain() {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(background)
+            setBackgroundColor(pageBackground)
             setPadding(20, 35, 20, 12)
         }
 
